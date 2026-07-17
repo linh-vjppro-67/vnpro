@@ -1,0 +1,1 @@
+import{s as e}from"./index-spq18fw-.js";import{n as t}from"./format-DdUZiTBv.js";var n=e();function r({value:e}){let r=e||`UNKNOWN`;return(0,n.jsx)(`span`,{className:`badge badge-${r.toLowerCase()}`,children:t(r)})}export{r as t};
