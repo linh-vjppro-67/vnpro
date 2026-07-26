@@ -1,0 +1,3 @@
+.badge-waiting_inventory,.badge-partially_paid{background:#fff4df;color:#9a610c}
+.badge-ready_for_delivery,.badge-accepted,.badge-paid{background:#e6f7f0;color:#147451}
+.badge-in_implementation,.badge-invoiced{background:#e9f1ff;color:#315f9d}

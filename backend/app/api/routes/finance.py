@@ -5,6 +5,7 @@ from app.api.deps import require_permission
 from app.core.permissions import Permission
 from app.db.session import get_db
 from app.models import Receivable, User
+from app.domain import receive_payment
 from app.schemas import ReceivableOut, ReceivableCreate, ReceivablePayment
 from app.services import audit
 
@@ -29,11 +30,16 @@ def pay_receivable(receivable_id: int, payload: ReceivablePayment, db: Session =
     item = db.get(Receivable, receivable_id)
     if not item:
         raise HTTPException(404, "Không tìm thấy công nợ")
-    item.paid_amount = item.paid_amount + payload.paid_amount
-    if item.paid_amount >= item.amount:
-        item.status = "PAID"
-    elif item.paid_amount > 0:
-        item.status = "PARTIAL"
-    audit(db, user, "PAYMENT", "RECEIVABLE", item.id, f"Paid {payload.paid_amount}")
-    db.commit(); db.refresh(item)
-    return item
+    if payload.paid_amount <= 0:
+        raise HTTPException(422, "Số tiền thu phải lớn hơn 0")
+    if item.status == "PAID" or item.paid_amount + payload.paid_amount > item.amount:
+        raise HTTPException(422, "Số tiền thu vượt số dư phải thu")
+    if not item.order_id:
+        raise HTTPException(422, "Khoản phải thu phải liên kết Sales Order để thu tiền")
+    _, order = receive_payment(
+        db, order_id=item.order_id, receivable_id=item.id, code=payload.code,
+        amount=payload.paid_amount, received_date=payload.received_date, method=payload.method,
+        transaction_ref=payload.transaction_ref, note=payload.note, user_id=user.id,
+    )
+    audit(db, user, "PAYMENT", "RECEIVABLE", item.id, f"{payload.code}: {payload.paid_amount}; order={order.code}")
+    db.commit(); db.refresh(item); return item

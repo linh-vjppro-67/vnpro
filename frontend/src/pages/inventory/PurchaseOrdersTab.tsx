@@ -29,11 +29,11 @@ export function PurchaseOrdersTab({ products, suppliers, onChange }: {products: 
     {key:'status',label:'Trạng thái',render:(r:any)=><StatusBadge value={r.status}/>},
     {key:'actions',label:'',render:(r:any)=><div style={{display:'flex',gap:6}}>
       {r.status==='DRAFT' && <button className="table-btn" onClick={()=>action(r.id,'place')}>Đặt hàng</button>}
-      {r.status==='ORDERED' && <button className="table-btn" onClick={()=>action(r.id,'receive')}>Nhập kho</button>}
+      {r.status==='ORDERED' && <span className="muted">Chờ kiểm nhận</span>}
     </div>},
   ]
   return <>
-    <div className="toolbar"><span>{rows.length} đơn mua hàng</span><button className="primary-btn small" onClick={()=>setShow(true)}><Plus size={15}/> Tạo đơn mua hàng</button></div>
+    <div className="toolbar"><span>{rows.length} đơn mua hàng</span><span className="muted">Tạo PO từ yêu cầu mua đã duyệt</span></div>
     {loading ? <div className="loading">Đang tải…</div> : <div className="panel"><DataTable rows={rows} columns={columns}/></div>}
     {show && <div className="modal-backdrop" onMouseDown={()=>setShow(false)}><form className="modal" onSubmit={create} onMouseDown={e=>e.stopPropagation()}>
       <h3>Tạo đơn mua hàng</h3>

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 from app.api.deps import require_permission
 from app.core.permissions import Permission
 from app.db.session import get_db
-from app.models import Customer, Opportunity, SalesOrder, Receivable, User
+from app.models import Customer, Opportunity, SalesOrder, SalesOrderItem, Receivable, User
 from app.schemas import CustomerCreate, CustomerOut, OpportunityCreate, OpportunityOut, OrderCreate, OrderOut, OrderUpdate, ReceivableCreate, ReceivableOut
 from app.services import audit
 
@@ -47,7 +47,18 @@ def orders(db: Session = Depends(get_db), _: User = Depends(require_permission(P
 
 @router.post("/orders", response_model=OrderOut, status_code=201)
 def create_order(payload: OrderCreate, db: Session = Depends(get_db), user: User = Depends(require_permission(Permission.SALES_WRITE))):
-    item = SalesOrder(**payload.model_dump(), created_by=user.id)
+    if db.scalar(select(SalesOrder).where(SalesOrder.code == payload.code)):
+        raise HTTPException(409, "Mã đơn hàng đã tồn tại")
+    if payload.opportunity_id:
+        opportunity = db.get(Opportunity, payload.opportunity_id)
+        if not opportunity or opportunity.customer_id != payload.customer_id:
+            raise HTTPException(422, "Cơ hội không thuộc khách hàng của đơn")
+    if payload.contract_id:
+        from app.models import Contract
+        contract = db.get(Contract, payload.contract_id)
+        if not contract or contract.customer_id != payload.customer_id or contract.status != "SIGNED":
+            raise HTTPException(422, "Hợp đồng chưa ký hoặc không thuộc khách hàng")
+    item = SalesOrder(**payload.model_dump(), status="DRAFT", total_amount=0, payment_status="UNPAID", created_by=user.id)
     db.add(item); db.flush(); audit(db, user, "CREATE", "SALES_ORDER", item.id, item.code); db.commit(); db.refresh(item)
     return item
 
@@ -68,7 +79,8 @@ def update_order(order_id: int, payload: OrderUpdate, db: Session = Depends(get_
     data = payload.model_dump(exclude_unset=True)
     for key, value in data.items():
         setattr(item, key, value)
-    audit(db, user, "UPDATE", "SALES_ORDER", item.id, f"Updated fields: {', '.join(data.keys())}")
+    before = {key: str(getattr(item, key)) for key in data}
+    audit(db, user, "UPDATE", "SALES_ORDER", item.id, "Cập nhật trường cho phép", old_values=before, new_values=data)
     db.commit(); db.refresh(item)
     return item
 
@@ -80,7 +92,14 @@ def confirm_order(order_id: int, db: Session = Depends(get_db), user: User = Dep
         raise HTTPException(404, "Không tìm thấy đơn hàng")
     if item.status != "DRAFT":
         raise HTTPException(409, "Đơn hàng chỉ có thể xác nhận khi đang ở trạng thái DRAFT")
-    item.status = "CONFIRMED"
+    if not db.scalar(select(func.count()).select_from(SalesOrderItem).where(SalesOrderItem.sales_order_id == item.id)):
+        raise HTTPException(422, "Đơn hàng phải có ít nhất một dòng hàng")
+    detail_total = db.scalar(select(func.coalesce(func.sum(SalesOrderItem.quantity * SalesOrderItem.unit_price), 0)).where(
+        SalesOrderItem.sales_order_id == item.id
+    ))
+    if detail_total != item.total_amount:
+        raise HTTPException(422, "Tổng giá trị đơn hàng không khớp tổng dòng hàng")
+    item.status = "WAITING_INVENTORY"
     audit(db, user, "CONFIRM", "SALES_ORDER", item.id, item.code)
     db.commit(); db.refresh(item)
     return item
@@ -88,10 +107,4 @@ def confirm_order(order_id: int, db: Session = Depends(get_db), user: User = Dep
 
 @router.post("/orders/{order_id}/invoice", response_model=ReceivableOut, status_code=201)
 def invoice_order(order_id: int, payload: ReceivableCreate, db: Session = Depends(get_db), user: User = Depends(require_permission(Permission.FINANCE_WRITE))):
-    order = db.get(SalesOrder, order_id)
-    if not order:
-        raise HTTPException(404, "Không tìm thấy đơn hàng")
-    new_receivable = Receivable(**payload.model_dump(), order_id=order.id, status="OPEN", paid_amount=0)
-    db.add(new_receivable); db.flush(); audit(db, user, "CREATE", "RECEIVABLE", new_receivable.id, new_receivable.invoice_no)
-    db.commit(); db.refresh(new_receivable)
-    return new_receivable
+    raise HTTPException(410, "Endpoint đã ngừng sử dụng; hãy phát hành hóa đơn qua /order-flow/orders/{id}/invoice")

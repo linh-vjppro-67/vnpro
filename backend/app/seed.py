@@ -6,20 +6,20 @@ from app.db.session import SessionLocal
 from app.models import (
     AcceptanceRecord, ApprovalRequest, Budget, Contract, ContractPaymentSchedule, Customer, Expense, Lead, Opportunity,
     Product, Project, PurchaseOrder, PurchaseOrderItem, PurchaseRequest, Quotation, QuotationItem, Receivable,
-    SalesOrder, StockMovement, StockReservation, Supplier, SupportTicket, Task, User, WorkOrder,
+    SalesOrder, SalesOrderItem, StockMovement, StockReservation, Supplier, SupportTicket, Task, User, WorkOrder,
 )
 
 USERS = [
-    ("admin@proscale.vn", "Quản trị hệ thống", "SYSTEM_ADMIN", "CNTT"),
-    ("director@proscale.vn", "Nguyễn Minh Giám", "DIRECTOR", "Ban Giám đốc"),
-    ("sales@proscale.vn", "Trần Hoài Sales", "SALES", "Kinh doanh"),
-    ("accounting@proscale.vn", "Lê Mai Kế toán", "ACCOUNTING", "Kế toán"),
-    ("warehouse@proscale.vn", "Phạm Anh Kho", "WAREHOUSE", "Kho"),
-    ("technical@proscale.vn", "Vũ Nam Kỹ thuật", "TECH_FIELD", "Kỹ thuật"),
-    ("techsolution@proscale.vn", "Đặng Quốc Kỹ thuật giải pháp", "TECH_SOLUTION", "Kỹ thuật"),
-    ("salesadmin@proscale.vn", "Đỗ Lan Sales Admin", "SALES_ADMIN", "Kinh doanh"),
-    ("cskh@proscale.vn", "Ngô Hà CSKH", "CUSTOMER_SERVICE", "CSKH"),
-    ("hr@proscale.vn", "Bùi An Nhân sự", "HR", "Nhân sự"),
+    ("admin@vnpro.vn", "Quản trị hệ thống", "SYSTEM_ADMIN", "CNTT"),
+    ("director@vnpro.vn", "Nguyễn Minh Giám", "DIRECTOR", "Ban Giám đốc"),
+    ("sales@vnpro.vn", "Trần Hoài Sales", "SALES", "Kinh doanh"),
+    ("accounting@vnpro.vn", "Lê Mai Kế toán", "ACCOUNTING", "Kế toán"),
+    ("warehouse@vnpro.vn", "Phạm Anh Kho", "WAREHOUSE", "Kho"),
+    ("technical@vnpro.vn", "Vũ Nam Kỹ thuật", "TECH_FIELD", "Kỹ thuật"),
+    ("techsolution@vnpro.vn", "Đặng Quốc Kỹ thuật giải pháp", "TECH_SOLUTION", "Kỹ thuật"),
+    ("salesadmin@vnpro.vn", "Đỗ Lan Sales Admin", "SALES_ADMIN", "Kinh doanh"),
+    ("cskh@vnpro.vn", "Ngô Hà CSKH", "CUSTOMER_SERVICE", "CSKH"),
+    ("hr@vnpro.vn", "Bùi An Nhân sự", "HR", "Nhân sự"),
 ]
 
 
@@ -66,9 +66,9 @@ def seed():
         leads[2].converted_to_opportunity_id = opp5.id
 
         orders = [
-            SalesOrder(code="DH-2026-041", customer_id=customers[0].id, opportunity_id=opps[0].id, title="Cung cấp cân định lượng và tích hợp PLC", status="IMPLEMENTING", total_amount=Decimal("1680000000"), cost_estimate=Decimal("1120000000"), payment_status="PARTIAL", due_date=date.today()+timedelta(days=25), created_by=sales.id),
-            SalesOrder(code="DH-2026-037", customer_id=customers[2].id, opportunity_id=opps[2].id, title="Lắp đặt cân xe tải 80 tấn", status="CONFIRMED", total_amount=Decimal("830000000"), cost_estimate=Decimal("570000000"), payment_status="UNPAID", due_date=date.today()+timedelta(days=42), created_by=sales.id),
-            SalesOrder(code="DH-2026-029", customer_id=customers[3].id, title="Bảo trì hệ thống cân bán lẻ", status="COMPLETED", total_amount=Decimal("320000000"), cost_estimate=Decimal("145000000"), payment_status="PARTIAL", due_date=date.today()-timedelta(days=15), created_by=sales.id),
+            SalesOrder(code="DH-2026-041", customer_id=customers[0].id, opportunity_id=opps[0].id, title="Cung cấp cân định lượng và tích hợp PLC", status="IN_IMPLEMENTATION", total_amount=Decimal("1680000000"), cost_estimate=Decimal("1120000000"), payment_status="PARTIAL", due_date=date.today()+timedelta(days=25), created_by=sales.id),
+            SalesOrder(code="DH-2026-037", customer_id=customers[2].id, opportunity_id=opps[2].id, title="Lắp đặt cân xe tải 80 tấn", status="WAITING_INVENTORY", total_amount=Decimal("830000000"), cost_estimate=Decimal("570000000"), payment_status="UNPAID", due_date=date.today()+timedelta(days=42), created_by=sales.id),
+            SalesOrder(code="DH-2026-029", customer_id=customers[3].id, title="Bảo trì hệ thống cân bán lẻ", status="CLOSED", total_amount=Decimal("320000000"), cost_estimate=Decimal("145000000"), payment_status="PARTIAL", due_date=date.today()-timedelta(days=15), created_by=sales.id),
         ]
         db.add_all(orders); db.flush()
 
@@ -97,7 +97,7 @@ def seed():
         expenses = [
             Expense(code="CP-00081", description="Mua loadcell dự phòng dự án An Việt", amount=Decimal("185000000"), category="Vật tư", department="Kỹ thuật", project_id=projects[0].id, status="APPROVED", expense_date=date.today()-timedelta(days=3), created_by=technical.id, approved_by=director.id),
             Expense(code="CP-00082", description="Chi phí vận chuyển thiết bị Bắc Ninh", amount=Decimal("28000000"), category="Vận chuyển", department="Kỹ thuật", project_id=projects[0].id, status="APPROVED", expense_date=date.today()-timedelta(days=2), created_by=technical.id, approved_by=director.id),
-            Expense(code="CP-00083", description="Chi phí hội chợ công nghiệp", amount=Decimal("76000000"), category="Marketing", department="Kinh doanh", status="PENDING", expense_date=date.today(), created_by=sales.id),
+            Expense(code="CP-00083", description="Chi phí hội chợ công nghiệp", amount=Decimal("76000000"), category="Marketing", department="Kinh doanh", status="SUBMITTED", expense_date=date.today(), created_by=sales.id),
             Expense(code="CP-00084", description="Văn phòng phẩm tháng 7", amount=Decimal("12500000"), category="Vận hành", department="HCVP", status="APPROVED", expense_date=date.today()-timedelta(days=5), created_by=hr.id, approved_by=director.id),
         ]
         db.add_all(expenses)
@@ -105,11 +105,16 @@ def seed():
         products = [
             Product(sku="CAS-CI2001A", name="Đầu cân CAS CI-2001A", category="Đầu cân", unit="Cái", sale_price=Decimal("18500000"), cost_price=Decimal("12200000"), min_stock=5, quantity_on_hand=8),
             Product(sku="LC-ZEMIC-H8C-2T", name="Loadcell Zemic H8C 2 tấn", category="Loadcell", unit="Cái", sale_price=Decimal("7800000"), cost_price=Decimal("5100000"), min_stock=10, quantity_on_hand=7),
-            Product(sku="SCALE-PRO-300KG", name="Cân bàn điện tử 300kg", category="Cân bàn", unit="Bộ", sale_price=Decimal("12500000"), cost_price=Decimal("7600000"), min_stock=6, quantity_on_hand=14),
+            Product(sku="SCALE-VNPRO-300KG", name="Cân bàn điện tử 300kg", category="Cân bàn", unit="Bộ", sale_price=Decimal("12500000"), cost_price=Decimal("7600000"), min_stock=6, quantity_on_hand=14),
             Product(sku="IND-WB-100T", name="Bộ cân ô tô 100 tấn", category="Cân ô tô", unit="Bộ", sale_price=Decimal("720000000"), cost_price=Decimal("480000000"), min_stock=1, quantity_on_hand=1),
             Product(sku="PRINTER-TMU220", name="Máy in phiếu Epson TM-U220", category="Phụ kiện", unit="Cái", sale_price=Decimal("6200000"), cost_price=Decimal("4100000"), min_stock=4, quantity_on_hand=3),
         ]
         db.add_all(products); db.flush()
+        db.add_all([
+            SalesOrderItem(sales_order_id=orders[0].id, product_id=products[0].id, name=products[0].name, quantity=8, unit_price=products[0].sale_price, fulfilled_quantity=8),
+            SalesOrderItem(sales_order_id=orders[1].id, product_id=products[3].id, name=products[3].name, quantity=1, unit_price=products[3].sale_price),
+            SalesOrderItem(sales_order_id=orders[2].id, product_id=products[2].id, name=products[2].name, quantity=2, unit_price=products[2].sale_price, fulfilled_quantity=2),
+        ])
 
         quotation1 = Quotation(code="BG-2026-001", opportunity_id=opps[2].id, customer_id=customers[2].id, status="APPROVED", created_by=sales.id, approved_by=director.id, payment_terms="30% tạm ứng, 40% khi lắp đặt, 30% khi nghiệm thu", warranty_terms="24 tháng", delivery_terms="45 ngày kể từ ngày đặt hàng")
         item1 = QuotationItem(product_id=products[3].id, name=products[3].name, quantity=1, unit_price=products[3].sale_price, discount_percent=Decimal("5"))
@@ -147,7 +152,7 @@ def seed():
         purchase_request1 = PurchaseRequest(code="YCM-2026-005", department="Kho", project_id=projects[1].id, product_id=products[3].id, quantity=1, reason="Bổ sung hàng cho dự án Đông Dương", status="APPROVED", created_by=warehouse.id, approved_by=director.id)
         db.add(purchase_request1); db.flush()
 
-        purchase_order1 = PurchaseOrder(code="PO-2026-014", supplier_id=suppliers[0].id, purchase_request_id=purchase_request1.id, expected_delivery_date=date.today()+timedelta(days=20), status="RECEIVED", created_by=warehouse.id)
+        purchase_order1 = PurchaseOrder(code="PO-2026-014", supplier_id=suppliers[0].id, purchase_request_id=purchase_request1.id, expected_delivery_date=date.today()+timedelta(days=20), status="FULLY_RECEIVED", created_by=warehouse.id)
         po_item1 = PurchaseOrderItem(product_id=products[3].id, quantity=1, unit_price=products[3].cost_price)
         purchase_order1.items = [po_item1]
         purchase_order1.total_amount = po_item1.quantity * po_item1.unit_price
@@ -183,7 +188,7 @@ def seed():
         ]
         db.add_all(tasks)
         db.commit()
-        print("Seeded PRO Enterprise Hub demo data")
+        print("Seeded VNPRO Enterprise Hub demo data")
     finally:
         db.close()
 

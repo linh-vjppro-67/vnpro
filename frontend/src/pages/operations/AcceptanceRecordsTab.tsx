@@ -37,8 +37,12 @@ export function AcceptanceRecordsTab({ workOrders }: {workOrders: any[]}) {
           <option value="" disabled>Chọn work order đã hoàn thành</option>
           {doneWorkOrders.map(w=><option key={w.id} value={w.id}>{w.code} — {w.title}</option>)}
         </select></label>
-        <label className="full">Nội dung nghiệm thu<input name="summary"/></label>
-        <label className="full">Người xác nhận (khách hàng)<input name="customer_signed_by"/></label>
+        <label className="full">Nội dung nghiệm thu<input name="summary" required/></label>
+        <label>Loại nghiệm thu<select name="acceptance_type"><option value="FULL">Toàn bộ</option><option value="PARTIAL">Từng phần</option></select></label>
+        <label>Ngày ký<input name="signed_date" type="date" required defaultValue={new Date().toISOString().slice(0,10)}/></label>
+        <label className="full">Kết quả checklist<textarea name="checklist_result" required/></label>
+        <label>Người xác nhận (khách hàng)<input name="customer_signed_by" required/></label>
+        <label>Hồ sơ/biên bản ký<input name="signed_file" required placeholder="Mã hoặc đường dẫn tệp biên bản"/></label>
       </div>
       <div className="modal-actions"><button type="button" className="ghost-btn" onClick={()=>setShow(false)}>Hủy</button><button className="primary-btn">Lưu biên bản</button></div>
     </form></div>}

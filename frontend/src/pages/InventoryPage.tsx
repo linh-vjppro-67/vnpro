@@ -8,9 +8,10 @@ import { SuppliersTab } from './inventory/SuppliersTab'
 import { PurchaseRequestsTab } from './inventory/PurchaseRequestsTab'
 import { PurchaseOrdersTab } from './inventory/PurchaseOrdersTab'
 import { ReservationsTab } from './inventory/ReservationsTab'
+import { GoodsReceiptsTab } from './inventory/GoodsReceiptsTab'
 
 export function InventoryPage(){
-  const [tab,setTab]=useState<'stock'|'suppliers'|'requests'|'orders'|'reservations'>('stock')
+  const [tab,setTab]=useState<'stock'|'suppliers'|'requests'|'orders'|'receipts'|'reservations'>('stock')
   const [rows,setRows]=useState<any[]>([]); const [suppliers,setSuppliers]=useState<any[]>([]); const [salesOrders,setSalesOrders]=useState<any[]>([])
   const [selected,setSelected]=useState<any|null>(null)
   const load=()=>api.get('/inventory/products').then(r=>setRows(r.data))
@@ -23,6 +24,7 @@ export function InventoryPage(){
       <button className={tab==='suppliers'?'active':''} onClick={()=>setTab('suppliers')}>Nhà cung cấp</button>
       <button className={tab==='requests'?'active':''} onClick={()=>setTab('requests')}>Yêu cầu mua hàng</button>
       <button className={tab==='orders'?'active':''} onClick={()=>setTab('orders')}>Đơn mua hàng</button>
+      <button className={tab==='receipts'?'active':''} onClick={()=>setTab('receipts')}>Kiểm nhận & nhập kho</button>
       <button className={tab==='reservations'?'active':''} onClick={()=>setTab('reservations')}>Giữ hàng</button>
     </div>
     {tab==='stock' && <>
@@ -34,6 +36,7 @@ export function InventoryPage(){
     {tab==='suppliers' && <SuppliersTab/>}
     {tab==='requests' && <PurchaseRequestsTab products={rows} suppliers={suppliers} onChange={load}/>}
     {tab==='orders' && <PurchaseOrdersTab products={rows} suppliers={suppliers} onChange={load}/>}
+    {tab==='receipts' && <GoodsReceiptsTab products={rows} onChange={loadShared}/>}
     {tab==='reservations' && <ReservationsTab products={rows} salesOrders={salesOrders} onChange={load}/>}
     {selected&&<div className="modal-backdrop" onMouseDown={()=>setSelected(null)}><form className="modal" onSubmit={move} onMouseDown={e=>e.stopPropagation()}><h3>Điều chỉnh kho · {selected.sku}</h3><p>{selected.name} · Hiện có <b>{selected.quantity_on_hand}</b> {selected.unit}</p><div className="form-grid"><label>Loại giao dịch<select name="movement_type"><option value="IN">Nhập kho</option><option value="OUT">Xuất kho</option><option value="ADJUST">Kiểm kê/Điều chỉnh</option></select></label><label>Số lượng<input name="quantity" type="number" min="1" required/></label><label>Mã tham chiếu<input name="reference" placeholder="DH-2026-041"/></label><label className="full">Ghi chú<input name="note"/></label></div><div className="modal-actions"><button type="button" className="ghost-btn" onClick={()=>setSelected(null)}>Hủy</button><button className="primary-btn">Cập nhật tồn kho</button></div></form></div>}
   </>

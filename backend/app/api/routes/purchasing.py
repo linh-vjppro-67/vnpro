@@ -90,6 +90,8 @@ def approve_purchase_request(request_id: int, payload: DecisionNote, db: Session
     item = db.get(PurchaseRequest, request_id)
     if not item:
         raise HTTPException(404, "Không tìm thấy yêu cầu mua hàng")
+    if item.created_by == user.id:
+        raise HTTPException(409, "Người tạo yêu cầu không được tự duyệt")
     _decide(db, "PURCHASE_REQUEST", item, user, True, payload.note)
     return item
 
@@ -136,16 +138,7 @@ def purchase_orders(db: Session = Depends(get_db), _: User = Depends(require_per
 
 @router.post("/orders", response_model=PurchaseOrderOut, status_code=201)
 def create_purchase_order(payload: PurchaseOrderCreate, db: Session = Depends(get_db), user: User = Depends(require_permission(Permission.PURCHASE_WRITE))):
-    if db.scalar(select(PurchaseOrder).where(PurchaseOrder.code == payload.code)):
-        raise HTTPException(409, "Mã đơn mua hàng đã tồn tại")
-    if not db.get(Supplier, payload.supplier_id):
-        raise HTTPException(404, "Không tìm thấy nhà cung cấp")
-    data = payload.model_dump(exclude={"items"})
-    order = PurchaseOrder(**data, status="DRAFT", created_by=user.id)
-    order.items = [PurchaseOrderItem(**i.model_dump()) for i in payload.items]
-    order.total_amount = sum((i.quantity * i.unit_price for i in order.items), Decimal(0))
-    db.add(order); db.flush(); audit(db, user, "CREATE", "PURCHASE_ORDER", order.id, order.code); db.commit(); db.refresh(order)
-    return order
+    raise HTTPException(410, "PO phải được tạo từ Purchase Request đã duyệt")
 
 
 @router.post("/orders/{order_id}/place", response_model=PurchaseOrderOut)
@@ -165,12 +158,4 @@ def receive_purchase_order(order_id: int, db: Session = Depends(get_db), user: U
     item = db.scalar(select(PurchaseOrder).options(selectinload(PurchaseOrder.items)).where(PurchaseOrder.id == order_id))
     if not item:
         raise HTTPException(404, "Không tìm thấy đơn mua hàng")
-    assert_transition("PURCHASE_ORDER", item.status, "RECEIVED")
-    for line in item.items:
-        product = db.get(Product, line.product_id)
-        product.quantity_on_hand += line.quantity
-        db.add(StockMovement(product_id=product.id, movement_type="IN", quantity=line.quantity, reference=item.code, note=f"Nhập kho từ PO {item.code}", created_by=user.id))
-    item.status = "RECEIVED"
-    audit(db, user, "RECEIVE", "PURCHASE_ORDER", item.id, item.code)
-    db.commit(); db.refresh(item)
-    return item
+    raise HTTPException(409, "Phải lập phiếu kiểm nhận tại /production/goods-receipts trước khi nhập kho")

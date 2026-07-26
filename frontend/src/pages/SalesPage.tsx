@@ -13,12 +13,13 @@ export function SalesPage() {
   const [tab, setTab] = useState<'leads'|'opportunities'|'customers'|'quotations'|'contracts'|'orders'>('opportunities')
   const [rows, setRows] = useState<any[]>([]); const [loading, setLoading] = useState(false); const [show, setShow] = useState(false)
   const [customers, setCustomers] = useState<any[]>([]); const [opportunities, setOpportunities] = useState<any[]>([]); const [quotations, setQuotations] = useState<any[]>([])
+  const [products, setProducts] = useState<any[]>([])
   const simpleTab = tab==='opportunities'||tab==='customers'||tab==='orders'
   const load = async () => {
     setLoading(true)
     try {
-      const [c, o, q] = await Promise.all([api.get('/sales/customers'), api.get('/sales/opportunities'), api.get('/crm/quotations')])
-      setCustomers(c.data); setOpportunities(o.data); setQuotations(q.data)
+      const [c, o, q, p] = await Promise.all([api.get('/sales/customers'), api.get('/sales/opportunities'), api.get('/crm/quotations'), api.get('/inventory/products')])
+      setCustomers(c.data); setOpportunities(o.data); setQuotations(q.data); setProducts(p.data)
       if (simpleTab) { const r = await api.get(`/sales/${tab}`); setRows(r.data) }
     } finally { setLoading(false) }
   }
@@ -41,7 +42,7 @@ export function SalesPage() {
       <button className={tab==='orders'?'active':''} onClick={()=>setTab('orders')}>Đơn hàng</button>
     </div>
     {tab==='leads' && <LeadsTab/>}
-    {tab==='quotations' && <QuotationsTab opportunities={opportunities} customers={customers}/>}
+    {tab==='quotations' && <QuotationsTab opportunities={opportunities} customers={customers} products={products}/>}
     {tab==='contracts' && <ContractsTab customers={customers} quotations={quotations}/>}
     {simpleTab && <section className="panel"><div className="toolbar"><div className="search"><Search size={17}/><input placeholder="Tìm theo mã hoặc tên…"/></div><span>{rows.length} bản ghi</span></div>{loading?<div className="loading">Đang tải…</div>:<DataTable rows={rows} columns={columns}/>}</section>}
     {show && <div className="modal-backdrop" onMouseDown={()=>setShow(false)}><form className="modal" onSubmit={createCustomer} onMouseDown={e=>e.stopPropagation()}><h3>Thêm khách hàng</h3><div className="form-grid"><label>Mã khách hàng<input name="code" required placeholder="KH-005"/></label><label>Tên khách hàng<input name="name" required/></label><label>Mã số thuế<input name="tax_code"/></label><label>Phân khúc<select name="segment"><option>Doanh nghiệp</option><option>Sản xuất</option><option>Dược phẩm</option><option>Logistics</option><option>Bán lẻ</option></select></label><label>Điện thoại<input name="phone"/></label><label>Email<input name="email" type="email"/></label><label className="full">Địa chỉ<input name="address"/></label></div><div className="modal-actions"><button type="button" className="ghost-btn" onClick={()=>setShow(false)}>Hủy</button><button className="primary-btn">Lưu khách hàng</button></div></form></div>}

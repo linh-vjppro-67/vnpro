@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from app.api.deps import require_permission
 from app.approvals import decide_approval, request_approval, resolve_user_by_role
@@ -44,8 +45,19 @@ def create_project(payload: ProjectCreate, db: Session = Depends(get_db), user: 
     order = db.get(SalesOrder, payload.order_id)
     if not order:
         raise HTTPException(404, "Không tìm thấy đơn hàng")
+    if order.status in {"DRAFT", "CANCELLED", "CLOSED"}:
+        raise HTTPException(409, "Đơn hàng chưa sẵn sàng hoặc đã kết thúc")
+    if db.scalar(select(Project).where(Project.order_id == order.id)):
+        raise HTTPException(409, "Sales Order đã có Project")
+    if db.scalar(select(Project).where(Project.code == payload.code)):
+        raise HTTPException(409, "Mã Project đã tồn tại")
     project = Project(**payload.model_dump(), customer_id=order.customer_id)
-    db.add(project); db.flush(); audit(db, user, "CREATE", "PROJECT", project.id, project.code); db.commit(); db.refresh(project)
+    try:
+        db.add(project); db.flush()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(409, "Sales Order đã có Project hoặc mã Project bị trùng")
+    audit(db, user, "CREATE", "PROJECT", project.id, project.code); db.commit(); db.refresh(project)
     return project
 
 
@@ -121,6 +133,14 @@ def create_acceptance_record(payload: AcceptanceRecordCreate, db: Session = Depe
         raise HTTPException(404, "Không tìm thấy work order")
     if work_order.status != "DONE":
         raise HTTPException(409, "Chỉ lập biên bản nghiệm thu khi work order đã hoàn thành")
+    if payload.acceptance_type not in {"PARTIAL", "FULL"}:
+        raise HTTPException(422, "Loại nghiệm thu phải là PARTIAL hoặc FULL")
+    if payload.acceptance_type == "FULL":
+        unfinished = db.scalar(select(WorkOrder.id).where(
+            WorkOrder.project_id == work_order.project_id, WorkOrder.status != "DONE"
+        ).limit(1))
+        if unfinished:
+            raise HTTPException(409, "Nghiệm thu toàn bộ chỉ được lập khi mọi Work Order đã hoàn thành")
     if db.scalar(select(AcceptanceRecord).where(AcceptanceRecord.code == payload.code)):
         raise HTTPException(409, "Mã biên bản nghiệm thu đã tồn tại")
     item = AcceptanceRecord(**payload.model_dump(), project_id=work_order.project_id, status="DRAFT", created_by=user.id)
@@ -142,6 +162,8 @@ def submit_acceptance_record(record_id: int, db: Session = Depends(get_db), user
     if not item:
         raise HTTPException(404, "Không tìm thấy biên bản nghiệm thu")
     assert_transition("ACCEPTANCE_RECORD", item.status, "SUBMITTED")
+    if not all([item.summary, item.customer_signed_by, item.signed_date, item.signed_file, item.checklist_result]):
+        raise HTTPException(422, "Biên bản thiếu checklist hoặc hồ sơ ký")
     project = db.get(Project, item.project_id)
     needs_director = acceptance_needs_director_approval(project.budget_amount if project else 0)
     approver = resolve_user_by_role(db, "DIRECTOR" if needs_director else "TECH_SOLUTION")

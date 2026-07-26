@@ -66,15 +66,16 @@ class OrderCreate(BaseModel):
     opportunity_id: int | None = None
     contract_id: int | None = None
     title: str
-    status: str = "DRAFT"
-    total_amount: Decimal = 0
     cost_estimate: Decimal = 0
-    payment_status: str = "UNPAID"
     due_date: date | None = None
 
 
 class OrderOut(OrderCreate, ORMModel):
     id: int
+    status: str
+    total_amount: Decimal
+    payment_status: str
+    invoiced_amount: Decimal = 0
     created_by: int | None = None
     created_at: datetime
 
@@ -117,6 +118,9 @@ class QuotationItemCreate(BaseModel):
     quantity: int = Field(default=1, gt=0)
     unit_price: Decimal = Field(ge=0)
     discount_percent: Decimal = Field(default=0, ge=0, le=100)
+    unit: str = "Cái"
+    tax_rate: Decimal = Field(default=0, ge=0, le=100)
+    estimated_cost: Decimal = Field(default=0, ge=0)
 
 
 class QuotationItemOut(QuotationItemCreate, ORMModel):
@@ -130,6 +134,8 @@ class QuotationCreate(BaseModel):
     payment_terms: str | None = None
     warranty_terms: str | None = None
     delivery_terms: str | None = None
+    valid_until: date | None = None
+    currency: str = "VND"
     items: list[QuotationItemCreate] = Field(default_factory=list)
 
 
@@ -145,6 +151,12 @@ class QuotationOut(ORMModel):
     status: str
     created_by: int | None
     approved_by: int | None
+    version_no: int = 1
+    valid_until: date | None = None
+    currency: str = "VND"
+    estimated_cost: Decimal = 0
+    margin_percent: Decimal = 0
+    locked_at: datetime | None = None
     created_at: datetime
     items: list[QuotationItemOut] = []
 
@@ -168,6 +180,9 @@ class ContractCreate(BaseModel):
     opportunity_id: int | None = None
     total_value: Decimal = 0
     warranty_terms: str | None = None
+    effective_date: date | None = None
+    expiry_date: date | None = None
+    delivery_scope: str | None = None
     payment_schedule: list[ContractPaymentScheduleCreate] = Field(default_factory=list)
 
 
@@ -181,6 +196,13 @@ class ContractOut(ORMModel):
     warranty_terms: str | None
     status: str
     signed_by: str | None
+    sign_date: date | None = None
+    effective_date: date | None = None
+    expiry_date: date | None = None
+    delivery_scope: str | None = None
+    customer_signer: str | None = None
+    company_signer: str | None = None
+    signed_file: str | None = None
     created_by: int | None
     approved_by: int | None
     sales_order_id: int | None
@@ -190,6 +212,10 @@ class ContractOut(ORMModel):
 
 class ContractSign(BaseModel):
     signed_by: str
+    sign_date: date
+    customer_signer: str
+    company_signer: str
+    signed_file: str
 
 
 class ContractGenerateOrder(BaseModel):
@@ -220,9 +246,6 @@ class ApprovalRequestOut(ORMModel):
 
 
 class OrderUpdate(BaseModel):
-    status: str | None = None
-    payment_status: str | None = None
-    total_amount: Decimal | None = None
     cost_estimate: Decimal | None = None
     due_date: date | None = None
 
@@ -273,8 +296,12 @@ class WorkOrderOut(WorkOrderCreate, ORMModel):
 class AcceptanceRecordCreate(BaseModel):
     code: str
     work_order_id: int
-    summary: str | None = None
-    customer_signed_by: str | None = None
+    summary: str
+    customer_signed_by: str
+    signed_date: date
+    signed_file: str
+    acceptance_type: str = "FULL"
+    checklist_result: str
 
 
 class AcceptanceRecordOut(ORMModel):
@@ -284,6 +311,10 @@ class AcceptanceRecordOut(ORMModel):
     project_id: int
     summary: str | None
     customer_signed_by: str | None
+    signed_date: date | None = None
+    signed_file: str | None = None
+    acceptance_type: str = "FULL"
+    checklist_result: str | None = None
     status: str
     created_by: int | None
     approved_by: int | None
@@ -298,6 +329,7 @@ class BudgetOut(ORMModel):
     period: str
     amount: Decimal
     spent_amount: Decimal
+    committed_amount: Decimal = 0
     status: str
 
 
@@ -308,6 +340,9 @@ class ExpenseCreate(BaseModel):
     category: str
     department: str
     project_id: int | None = None
+    budget_id: int | None = None
+    supplier_id: int | None = None
+    attachment_refs: str | None = None
     expense_date: date = Field(default_factory=date.today)
 
 
@@ -438,13 +473,21 @@ class ReceivableCreate(BaseModel):
 
 class ReceivablePayment(BaseModel):
     paid_amount: Decimal
+    code: str
+    received_date: date = Field(default_factory=date.today)
+    method: str = "BANK_TRANSFER"
+    transaction_ref: str | None = None
+    note: str | None = None
 
 
 class SupportTicketCreate(BaseModel):
     code: str
     customer_id: int
     project_id: int | None = None
+    sales_order_id: int | None = None
+    product_id: int | None = None
     subject: str
+    description: str | None = None
     priority: str = "MEDIUM"
 
 
@@ -453,6 +496,10 @@ class SupportTicketOut(SupportTicketCreate, ORMModel):
     status: str
     assigned_to: int | None = None
     sla_due_at: datetime | None = None
+    first_response_at: datetime | None = None
+    resolved_at: datetime | None = None
+    resolution: str | None = None
+    warranty_status: str | None = None
     created_at: datetime
 
 

@@ -20,7 +20,7 @@ export function ContractsTab({ customers, quotations }: {customers: any[]; quota
   const updateRow = (idx: number, patch: Partial<Installment>) => setSchedule(schedule.map((s, i) => i === idx ? { ...s, ...patch } : s))
   const create = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault(); const f = new FormData(e.currentTarget)
-    await api.post('/crm/contracts', { code: f.get('code'), customer_id: Number(f.get('customer_id')), quotation_id: f.get('quotation_id') ? Number(f.get('quotation_id')) : null, total_value: Number(f.get('total_value')), warranty_terms: f.get('warranty_terms') || null, payment_schedule: schedule })
+    await api.post('/crm/contracts', { code: f.get('code'), customer_id: Number(f.get('customer_id')), quotation_id: f.get('quotation_id') ? Number(f.get('quotation_id')) : null, total_value: Number(f.get('total_value')), warranty_terms: f.get('warranty_terms') || null, effective_date:f.get('effective_date'), expiry_date:f.get('expiry_date')||null, delivery_scope:f.get('delivery_scope'), payment_schedule: schedule })
     setShow(false); setSchedule([{ ...emptyInstallment }]); load()
   }
   const action = async (id: number, path: string, body: any = {}) => { await api.post(`/crm/contracts/${id}/${path}`, body); load() }
@@ -59,6 +59,9 @@ export function ContractsTab({ customers, quotations }: {customers: any[]; quota
         </select></label>
         <label>Giá trị hợp đồng<input name="total_value" type="number" min="0" required/></label>
         <label className="full">Bảo hành<input name="warranty_terms"/></label>
+        <label>Hiệu lực từ<input name="effective_date" type="date" required/></label>
+        <label>Hết hạn<input name="expiry_date" type="date"/></label>
+        <label className="full">Phạm vi giao hàng/triển khai<input name="delivery_scope" required/></label>
       </div>
       <h3>Lịch thanh toán</h3>
       {schedule.map((s,idx)=><div key={idx} className="form-grid" style={{gridTemplateColumns:'2fr 1fr 1fr auto',alignItems:'end'}}>
@@ -72,7 +75,7 @@ export function ContractsTab({ customers, quotations }: {customers: any[]; quota
     </form></div>}
     {signing && <div className="modal-backdrop" onMouseDown={()=>setSigning(null)}><form className="modal" onSubmit={sign} onMouseDown={e=>e.stopPropagation()}>
       <h3>Xác nhận đã ký hợp đồng {signing.code}</h3>
-      <div className="form-grid"><label className="full">Người ký<input name="signed_by" required/></label></div>
+      <div className="form-grid"><label>Người xác nhận<input name="signed_by" required/></label><label>Ngày ký<input name="sign_date" type="date" required/></label><label>Người ký khách hàng<input name="customer_signer" required/></label><label>Người ký công ty<input name="company_signer" required/></label><label className="full">File hợp đồng đã ký<input name="signed_file" required placeholder="Mã file/đường dẫn lưu trữ"/></label></div>
       <div className="modal-actions"><button type="button" className="ghost-btn" onClick={()=>setSigning(null)}>Hủy</button><button className="primary-btn">Xác nhận</button></div>
     </form></div>}
     {ordering && <div className="modal-backdrop" onMouseDown={()=>setOrdering(null)}><form className="modal" onSubmit={generateOrder} onMouseDown={e=>e.stopPropagation()}>

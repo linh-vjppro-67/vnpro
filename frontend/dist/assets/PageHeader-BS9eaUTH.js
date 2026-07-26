@@ -1,0 +1,1 @@
+import{c as e}from"./index-Cg5jHP1T.js";var t=e();function n({title:e,description:n,actions:r}){return(0,t.jsxs)(`div`,{className:`page-header`,children:[(0,t.jsxs)(`div`,{children:[(0,t.jsx)(`h1`,{children:e}),(0,t.jsx)(`p`,{children:n})]}),(0,t.jsx)(`div`,{children:r})]})}export{n as t};

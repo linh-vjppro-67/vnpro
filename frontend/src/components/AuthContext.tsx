@@ -1,24 +1,26 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import type { User } from '../types'
 import { api } from '../lib/api'
 
-type AuthValue = { user: User | null; login: (email: string, password: string) => Promise<void>; logout: () => void }
+type AuthValue = { user: User | null; loading: boolean; login: (email: string, password: string) => Promise<void>; logout: () => Promise<void> }
 const AuthContext = createContext<AuthValue | null>(null)
 
 export function AuthProvider({ children }: {children: ReactNode}) {
-  const [user, setUser] = useState<User | null>(() => {
-    const raw = localStorage.getItem('pro_user'); return raw ? JSON.parse(raw) : null
-  })
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+  useEffect(() => {
+    api.get('/auth/me').then(r => setUser(r.data)).catch(() => setUser(null)).finally(() => setLoading(false))
+  }, [])
   const value = useMemo<AuthValue>(() => ({
-    user,
+    user, loading,
     login: async (email, password) => {
       const { data } = await api.post('/auth/login', { email, password })
-      localStorage.setItem('pro_token', data.access_token)
-      localStorage.setItem('pro_user', JSON.stringify(data.user))
       setUser(data.user)
     },
-    logout: () => { localStorage.removeItem('pro_token'); localStorage.removeItem('pro_user'); setUser(null) }
-  }), [user])
+    logout: async () => {
+      try { await api.post('/auth/logout') } finally { setUser(null) }
+    },
+  }), [user, loading])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
